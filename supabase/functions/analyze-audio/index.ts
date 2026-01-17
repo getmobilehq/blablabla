@@ -16,13 +16,18 @@ interface RateLimitCheck {
 }
 
 serve(async (req) => {
-  // CORS headers
+  // CORS headers for all responses
+  const corsHeaders = {
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  };
+
+  // Handle CORS preflight
   if (req.method === 'OPTIONS') {
     return new Response(null, {
       headers: {
-        'Access-Control-Allow-Origin': '*',
+        ...corsHeaders,
         'Access-Control-Allow-Methods': 'POST',
-        'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
       },
     });
   }
@@ -33,23 +38,35 @@ serve(async (req) => {
     if (!authHeader) {
       return new Response(JSON.stringify({ error: 'Missing authorization' }), {
         status: 401,
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...corsHeaders,
+        },
       });
     }
 
-    // Initialize Supabase client
+    // Initialize Supabase client with service role to verify JWT
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const supabase = createClient(supabaseUrl, supabaseKey);
-
-    // Get user from JWT
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const jwt = authHeader.replace('Bearer ', '');
+
+    const supabase = createClient(supabaseUrl, supabaseServiceKey, {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false
+      }
+    });
+
+    // Verify the user is authenticated by checking the JWT
     const { data: { user }, error: userError } = await supabase.auth.getUser(jwt);
 
     if (userError || !user) {
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+      return new Response(JSON.stringify({ error: 'Unauthorized', details: userError?.message }), {
         status: 401,
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...corsHeaders,
+        },
       });
     }
 
@@ -69,7 +86,10 @@ serve(async (req) => {
         }),
         {
           status: 429,
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type': 'application/json',
+            ...corsHeaders,
+          },
         }
       );
     }
@@ -81,7 +101,10 @@ serve(async (req) => {
     if (!audioFile) {
       return new Response(JSON.stringify({ error: 'No audio file provided' }), {
         status: 400,
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...corsHeaders,
+        },
       });
     }
 
@@ -93,19 +116,27 @@ serve(async (req) => {
         }),
         {
           status: 413,
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type': 'application/json',
+            ...corsHeaders,
+          },
         }
       );
     }
 
-    // Validate file type
-    const validMimeTypes = ['audio/webm', 'audio/mp4', 'audio/mpeg', 'audio/wav', 'audio/ogg'];
-    if (!validMimeTypes.includes(audioFile.type)) {
+    // Validate file type (support codec variations like audio/webm;codecs=opus)
+    const validMimeTypePrefixes = ['audio/webm', 'audio/mp4', 'audio/mpeg', 'audio/wav', 'audio/ogg'];
+    const isValidAudioType = validMimeTypePrefixes.some(prefix => audioFile.type.startsWith(prefix));
+
+    if (!isValidAudioType) {
       return new Response(
-        JSON.stringify({ error: 'Invalid file type. Please upload an audio file.' }),
+        JSON.stringify({ error: `Invalid file type: ${audioFile.type}. Please upload an audio file.` }),
         {
           status: 400,
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type': 'application/json',
+            ...corsHeaders,
+          },
         }
       );
     }
@@ -149,7 +180,10 @@ serve(async (req) => {
         }),
         {
           status: 200,
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type': 'application/json',
+            ...corsHeaders,
+          },
         }
       );
     }
@@ -245,7 +279,7 @@ If you truly cannot identify anything, set primary to null and explain in follow
         status: 200,
         headers: {
           'Content-Type': 'application/json',
-          'Access-Control-Allow-Origin': '*',
+          ...corsHeaders,
         },
       }
     );
@@ -258,7 +292,10 @@ If you truly cannot identify anything, set primary to null and explain in follow
       }),
       {
         status: 500,
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...corsHeaders,
+        },
       }
     );
   }
