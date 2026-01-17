@@ -121,9 +121,9 @@ CREATE POLICY "Users can delete own feedback" ON feedback
 -- STORAGE BUCKET
 -- ============================================
 
--- Create recordings bucket (run this in Storage settings or via SQL)
+-- Create recordings bucket (private for security)
 INSERT INTO storage.buckets (id, name, public)
-VALUES ('recordings', 'recordings', true)
+VALUES ('recordings', 'recordings', false)
 ON CONFLICT (id) DO NOTHING;
 
 -- Storage policies

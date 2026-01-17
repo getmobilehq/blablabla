@@ -96,15 +96,17 @@ export function RecordPage() {
 
       if (uploadError) throw uploadError;
 
-      // Get public URL
-      const { data: urlData } = supabase.storage
+      // Get signed URL (valid for 1 year)
+      const { data: urlData, error: urlError } = await supabase.storage
         .from(BUCKETS.RECORDINGS)
-        .getPublicUrl(fileName);
+        .createSignedUrl(fileName, 31536000); // 1 year
+
+      if (urlError) throw urlError;
 
       // Save recording to database
       const { error: dbError } = await supabase.from(TABLES.RECORDINGS).insert({
         user_id: user.id,
-        audio_url: urlData.publicUrl,
+        audio_url: urlData.signedUrl,
         duration_seconds: duration,
         transcription: analysisResult.transcription.text,
         transcription_confidence: analysisResult.transcription.confidence,

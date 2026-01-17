@@ -56,8 +56,9 @@ Edit `.env` with your credentials:
 ```env
 VITE_SUPABASE_URL=https://your-project.supabase.co
 VITE_SUPABASE_ANON_KEY=your-anon-key
-VITE_OPENAI_API_KEY=sk-your-openai-key
 ```
+
+**Note**: OpenAI API key is configured server-side in Supabase Edge Functions for security.
 
 ### 4. Run Development Server
 
@@ -110,20 +111,17 @@ See `tailwind.config.js` for the complete design token system.
 
 ## Deployment
 
-### Netlify (Recommended)
+See [DEPLOYMENT.md](./DEPLOYMENT.md) for complete deployment instructions including:
+- Database setup
+- Edge Function deployment
+- Security configuration
+- Environment variables
 
-1. Push to GitHub
-2. Connect repo to Netlify
-3. Set build command: `npm run build`
-4. Set publish directory: `dist`
-5. Add environment variables in Netlify dashboard
+**Quick Start:**
 
-### Vercel
-
-```bash
-npm install -g vercel
-vercel --prod
-```
+1. Deploy Edge Function: `supabase functions deploy analyze-audio`
+2. Set OpenAI secret: `supabase secrets set OPENAI_API_KEY=sk-xxx`
+3. Deploy frontend to Netlify/Vercel
 
 ## API Costs
 
